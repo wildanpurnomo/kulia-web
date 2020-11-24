@@ -9,7 +9,7 @@ import debugLib from 'debug';
 import http from 'http';
 import mongoose from 'mongoose';
 const debug = debugLib('kuliah-web-be:server');
-const dbUri = "mongodb://localhost/wakwau";
+const dbUri = process.env.MONGO_URI || "mongodb://localhost/wakwau";
 
 /**
  * Get port from environment and store in Express.
