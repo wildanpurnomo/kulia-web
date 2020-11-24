@@ -19,8 +19,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // Use CORS middleware
-import cors from 'cors';
-app.use(cors());
+import { handleCors } from './libs/cors.lib';
+app.use(handleCors);
 
 // Use static files middleware
 import path from 'path';

@@ -54,6 +54,16 @@ class AuthController extends BaseController {
             next(error);
         }
     }
+
+    logout_POST(req, res) {
+        try {
+            res.clearCookie('jwt');
+            res.status(200).json(super.createSuccessResponse({ message: 'Logout berhasil' }));
+        } catch (error) {
+            super.logMessage("authController at logout_post", error);
+            next(error);
+        }
+    }
 }
 
 export default new AuthController(); 
