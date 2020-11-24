@@ -16,7 +16,7 @@ class AuthController extends BaseController {
             let user = await UserModel.login(username, password);
             user.password = undefined;
             let token = this.createToken(user._id);
-            res.cookie('jwt', token, { httpOnly: true, maxAge: this.tokenMaxAge});
+            res.cookie('jwt', token, { httpOnly: true, maxAge: this.tokenMaxAge, sameSite: 'none'});
             res.status(200).json(this.createSuccessResponse(user));
         } catch (error) {
             console.error(error);
@@ -33,7 +33,7 @@ class AuthController extends BaseController {
                 let user = await UserModel.create({ username, email, password });
                 user.password = undefined;
                 let token = this.createToken(user._id);
-                res.cookie('jwt', token, { httpOnly: true, maxAge: this.tokenMaxAge});
+                res.cookie('jwt', token, { httpOnly: true, maxAge: this.tokenMaxAge, sameSite: 'none'});
                 res.status(200).json(this.createSuccessResponse(user));
             }
         } catch (error) {
