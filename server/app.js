@@ -22,9 +22,21 @@ app.use(express.urlencoded({ extended: false }));
 import { handleCors } from './libs/cors.lib';
 app.use(handleCors);
 
-// Use static files middleware
+// Host Vue SPA
+import history from 'connect-history-api-fallback';
 import path from 'path';
-app.use(express.static(path.join(__dirname, '../public')));
+app.use(history({
+    rewrites: [{
+        from: /^\/api\/.*$/,
+        to: (context) => {
+            return context.parsedUrl.path
+        }
+    }]
+}));
+app.use(express.static(path.join(__dirname, '../public/dist')));
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/dist'));
+});
 
 // Use Morgan logger middleware
 import logger from 'morgan';
