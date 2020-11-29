@@ -1,30 +1,28 @@
 import mongoose from 'mongoose';
 
 const schema = new mongoose.Schema({
-    _id: { 
-        type: mongoose.Schema.Types.ObjectId,
-        required: [true, 'Id konten harus disertakan'],
-        unique: true,
-     },
     creatorId: {
         type: String,
         required: [true, 'Id pembuat harus disertakan'],
-        unique: true,
     },
     title: {
         type: String,
-        required: [true, "Mohon masukkan username"],
-        unique: true,
+        required: [true, "Mohon masukkan judul"],
         trim: true,
     },
     description: {
         type: String,
-        required: [true, "Mohon masukkan password"],
+        required: [true, "Mohon masukkan deskripsi"],
+        trim: true
     },
     mediaUrls: {
         type: Array,
         default: [],
     },
+    sharedBy: {
+        type: Array,
+        default: [],
+    }
 }, { timestamp: true });
 
 const ContentModel = mongoose.model('Content', schema);

@@ -122,3 +122,6 @@ fe
 
 # ssshh
 keyfile.json
+app.yaml
+
+.gcloudignore

@@ -1,9 +1,7 @@
 import BaseController from './base.controller';
 import ContentModel from '../models/content.model';
-import StorageModel from '../models/storage.model';
 import path from 'path';
 import { StorageInstance } from '../libs/storage.lib';
-import mongoose from 'mongoose';
 
 class ContentController extends BaseController {
     constructor() {
@@ -28,9 +26,9 @@ class ContentController extends BaseController {
 
     async getPersonalContent_GET(req, res, next) {
         try {
-            let token = req.cookies.token;
+            let token = req.cookies.jwt;
             let decoded = this.decodeToken(token);
-            let contentList = await ContentModel.findById(decoded.id);
+            let contentList = await ContentModel.find({ creatorId: decoded.id });
             res.status(200).json(this.createSuccessResponse(contentList));
         } catch (error) {
             console.error(error);
@@ -49,8 +47,9 @@ class ContentController extends BaseController {
     }
 
     async createContent_POST(req, res, next) {
+        let token = req.cookies.jwt;
+        let decoded = this.decodeToken(token);
         if (req.files) {
-            let contentId = mongoose.Types.ObjectId();
             let bucket = StorageInstance.bucket(process.env.CLOUD_BUCKET);
             let promises = [];
             req.files['media'].forEach(file => {
@@ -64,18 +63,8 @@ class ContentController extends BaseController {
                     blobStream.on('error', err => reject(err));
 
                     blobStream.on('finish', async () => {
-                        try {
-                            let toBeSaved = {
-                                contentId: contentId,
-                                creatorId: req.body.creatorId,
-                                mediaUrl: `${process.env.GCLOUD_PUBLIC_BASE_URL}/${process.env.CLOUD_BUCKET}/${gcsName}`,
-                                mediaType: fileType,
-                                mediaOriginalName: file.originalname
-                            }
-                            resolve(await StorageModel.create(toBeSaved));
-                        } catch (error) {
-                            reject(error);
-                        }
+                        let url = `${process.env.GCLOUD_PUBLIC_BASE_URL}/${process.env.CLOUD_BUCKET}/${gcsName}`;
+                        resolve(url);
                     });
 
                     blobStream.end(file.buffer);
@@ -85,19 +74,16 @@ class ContentController extends BaseController {
             });
 
             Promise.all(promises)
-                .then(async storageList => {
-                    let mediaUrls = storageList.map(storageItem => {
-                        return storageItem.mediaUrl
-                    });
+                .then(async mediaUrls => {
                     let toBeSaved = {
-                        _id: contentId,
-                        creatorId: req.body.creatorId,
+                        creatorId: decoded.id,
                         title: req.body.title,
                         description: req.body.description,
                         mediaUrls: mediaUrls
                     }
-                    let contentData = await ContentModel.create(toBeSaved);
-                    res.status(200).json(this.createSuccessResponse(contentData));
+                    await ContentModel.create(toBeSaved);
+                    let contentList = await ContentModel.find({ creatorId: decoded.id });
+                    res.status(200).json(this.createSuccessResponse(contentList));
                 })
                 .catch(error => {
                     console.error(error);
@@ -105,8 +91,10 @@ class ContentController extends BaseController {
                 })
         } else {
             try {
-                let contentData = await ContentModel.create(req.body);
-                res.status(200).json(this.createSuccessResponse(contentData)); 
+                req.body.creatorId = decoded.id;
+                await ContentModel.create(req.body);
+                let contentList = await ContentModel.find({ creatorId: decoded.id });
+                res.status(200).json(this.createSuccessResponse(contentList));
             } catch (error) {
                 console.error(error);
                 next(error);
@@ -116,8 +104,11 @@ class ContentController extends BaseController {
 
     async updateContent_PUT(req, res, next) {
         try {
-            let contentData = await ContentModel.findOneAndUpdate({ _id: req.params.contentId }, req.body);
-            res.status(200).json(this.createSuccessResponse(contentData));
+            let token = req.cookies.jwt;
+            let decoded = this.decodeToken(token);
+            await ContentModel.findOneAndUpdate({ _id: req.params.contentId }, req.body);
+            let contentList = await ContentModel.find({ creatorId: decoded.id });
+            res.status(200).json(this.createSuccessResponse(contentList));
         } catch (error) {
             console.error(error);
             next(error);
@@ -126,8 +117,10 @@ class ContentController extends BaseController {
 
     async deleteContent_DELETE(req, res, next) {
         try {
-            await ContentModel.findOneAndDelete({ _id: req.params.id });
-            let contentList = await ContentModel.find({});
+            let token = req.cookies.jwt;
+            let decoded = this.decodeToken(token);
+            await ContentModel.findOneAndDelete({ _id: req.params.contentId });
+            let contentList = await ContentModel.find({ creatorId: decoded.id });
             res.status(200).json(this.createSuccessResponse(contentList));
         } catch (error) {
             console.error(error);

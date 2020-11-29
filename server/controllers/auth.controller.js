@@ -1,6 +1,7 @@
 import BaseController from './base.controller';
 import UserModel from '../models/user.model';
 import { ErrorHandler } from '../libs/error.lib';
+import axios from 'axios';
 
 class AuthController extends BaseController {
     constructor() {
@@ -16,8 +17,7 @@ class AuthController extends BaseController {
             let user = await UserModel.login(username, password);
             user.password = undefined;
             let token = this.createToken(user._id);
-            let cookieOption = req.headers.origin.includes('localhost') > -1 ? { domain: 'localhost' } : {};
-            res.cookie('jwt', token, { httpOnly: true, maxAge: this.tokenMaxAge, cookieOption });
+            res.cookie('jwt', token, { httpOnly: true, secure: process.env.IS_USING_GAE, sameSite: 'none' });
             res.status(200).json(this.createSuccessResponse(user));
         } catch (error) {
             console.error(error);
@@ -31,11 +31,12 @@ class AuthController extends BaseController {
             if (password != passwordConfirmation) {
                 throw new ErrorHandler("Konfirmasi password tidak sesuai");
             } else {
-                let user = await UserModel.create({ username, email, password });
+                let profilePictureResponse = await axios.get("https://randomuser.me/api/");
+                let profilePicUrl = profilePictureResponse.data.results[0].picture.medium;
+                let user = await UserModel.create({ username, profilePicUrl, email, password });
                 user.password = undefined;
                 let token = this.createToken(user._id);
-                let cookieOption = req.headers.origin.includes('localhost') > -1 ? { domain: 'localhost' } : {};
-                res.cookie('jwt', token, { httpOnly: true, maxAge: this.tokenMaxAge, cookieOption });
+                res.cookie('jwt', token, { httpOnly: true, secure: process.env.IS_USING_GAE, sameSite: 'none' });
                 res.status(200).json(this.createSuccessResponse(user));
             }
         } catch (error) {
@@ -59,7 +60,7 @@ class AuthController extends BaseController {
 
     logout_POST(req, res) {
         try {
-            res.clearCookie('jwt');
+            res.cookie('jwt', '', { maxAge: 1, secure: process.env.IS_USING_GAE, sameSite: 'none' });
             res.status(200).json(super.createSuccessResponse({ message: 'Logout berhasil' }));
         } catch (error) {
             super.logMessage("authController at logout_post", error);

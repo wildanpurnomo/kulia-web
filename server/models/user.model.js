@@ -17,6 +17,10 @@ const schema = new mongoose.Schema({
         unique: true,
         trim: true,
     },
+    profilePicUrl: {
+        type: String,
+        required: [true, "Mohon masukkan foto profil"]
+    },
     password: {
         type: String,
         required: [true, "Mohon masukkan password"],
@@ -51,14 +55,40 @@ schema.statics.login = async function (username, password) {
     }
 }
 
+schema.statics.getFollowingList = async function(userId) {
+    let user = await this.findById(userId);
+    let queryCondition = [];
+    user.followingIds.forEach(item => {
+        queryCondition.push({
+            _id: item
+        });
+    });
+    let followingList = await this.find({ $and: queryCondition });
+    return followingList;
+}
+
+schema.statics.followOtherUser = async function (userId, followingId) {
+    let user = await this.findById(userId);
+    let newFollowingIds = user.followingIds.push(followingId);
+    await this.findOneAndUpdate({ _id: userId }, { followingIds: newFollowingIds });
+    let queryCondition = [];
+    newFollowingIds.forEach(item => {
+        queryCondition.push({
+            _id: item
+        });
+    });
+    let newFollowingList = await this.find({ $and: queryCondition });
+    return newFollowingList;
+}
+
 schema.statics.alterPassword = async function (userId, oldPassword, newPassword) {
-    let user = await this.findOne({ _id: userId });
+    let user = await this.findById(userId);
     if (user) {
         let isPasswordMatch = await bcrypt.compare(oldPassword, user.password);
         if (isPasswordMatch) {
             let salt = await bcrypt.genSalt();
             let hashed = await bcrypt.hash(newPassword, salt);
-            let userData = await this.findOneAndUpdate({ _id: userId }, { password: hashed });
+            let userData = await this.findOneAndUpdate({ _id: userId }, { password: hashed }, { new: true });
             return userData;
         } else {
             throw new ErrorHandler('Password lama salah');

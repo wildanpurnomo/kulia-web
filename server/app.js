@@ -49,8 +49,10 @@ app.use('/api', authRouter);
 // Use Authorization middleware for the rest of the routes
 import { verifyJwt } from './libs/authorization.lib';
 import usersRouter from './routes/user.route';
+import contentRouter from './routes/content.route';
 app.use(verifyJwt);
 app.use('/api', usersRouter);
+app.use('/api', contentRouter);
 
 // Use errorHandler middleware
 import { handleError } from './libs/error.lib';
