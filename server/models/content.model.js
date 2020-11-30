@@ -2,7 +2,8 @@ import mongoose from 'mongoose';
 
 const schema = new mongoose.Schema({
     creatorId: {
-        type: String,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
         required: [true, 'Id pembuat harus disertakan'],
     },
     title: {
@@ -23,7 +24,7 @@ const schema = new mongoose.Schema({
         type: Array,
         default: [],
     }
-}, { timestamp: true });
+}, { timestamps: true });
 
 const ContentModel = mongoose.model('Content', schema);
 

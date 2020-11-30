@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import { ErrorHandler } from '../libs/error.lib';
+import escapeStringRegexp from 'escape-string-regexp';
 
 const schema = new mongoose.Schema({
     email: {
@@ -55,7 +56,18 @@ schema.statics.login = async function (username, password) {
     }
 }
 
-schema.statics.getFollowingList = async function(userId) {
+schema.statics.discoverOtherUsers = async function (userId, usernameQuery) {
+    let user = await this.findById(userId);
+    let $regex = escapeStringRegexp(usernameQuery.split("%20").join(""));
+    let userList = await UserModel.find({ username: { $regex } }).select('-password');
+    let normalizedList = JSON.parse(JSON.stringify(userList));
+    return normalizedList.map(item => {
+        item.isFollowedByUser = user.followingIds.includes(item._id) ? true : false;
+        return item;
+    });
+}
+
+schema.statics.getFollowingList = async function (userId) {
     let user = await this.findById(userId);
     let queryCondition = [];
     user.followingIds.forEach(item => {
@@ -63,21 +75,41 @@ schema.statics.getFollowingList = async function(userId) {
             _id: item
         });
     });
-    let followingList = await this.find({ $and: queryCondition });
+    let followingList = queryCondition.length === 0 ? [] : await this.find({ $or: queryCondition }).select('-password');
     return followingList;
 }
 
 schema.statics.followOtherUser = async function (userId, followingId) {
     let user = await this.findById(userId);
-    let newFollowingIds = user.followingIds.push(followingId);
-    await this.findOneAndUpdate({ _id: userId }, { followingIds: newFollowingIds });
+    if (!user.followingIds.includes(followingId)) {
+        user.followingIds.push(followingId);
+        await this.findOneAndUpdate({ _id: userId }, { followingIds: user.followingIds });
+    }
     let queryCondition = [];
-    newFollowingIds.forEach(item => {
+    user.followingIds.forEach(item => {
         queryCondition.push({
             _id: item
         });
     });
-    let newFollowingList = await this.find({ $and: queryCondition });
+    let newFollowingList = queryCondition.length === 0 ? [] : await this.find({ $or: queryCondition }).select('-password');
+    return newFollowingList;
+}
+
+schema.statics.unfollowOtherUser = async function (userId, unfollowingId) {
+    let user = await this.findById(userId);
+    if (user.followingIds.includes(unfollowingId)) {
+        user.followingIds = user.followingIds.filter(item => {
+            return item !== unfollowingId
+        });
+        await this.findOneAndUpdate({ _id: userId }, { followingIds: user.followingIds });
+    }
+    let queryCondition = [];
+    user.followingIds.forEach(item => {
+        queryCondition.push({
+            _id: item
+        });
+    });
+    let newFollowingList = queryCondition.length === 0 ? [] : await this.find({ $or: queryCondition }).select('-password');
     return newFollowingList;
 }
 
@@ -88,7 +120,7 @@ schema.statics.alterPassword = async function (userId, oldPassword, newPassword)
         if (isPasswordMatch) {
             let salt = await bcrypt.genSalt();
             let hashed = await bcrypt.hash(newPassword, salt);
-            let userData = await this.findOneAndUpdate({ _id: userId }, { password: hashed }, { new: true });
+            let userData = await this.findOneAndUpdate({ _id: userId }, { password: hashed }, { new: true }).select('-password');
             return userData;
         } else {
             throw new ErrorHandler('Password lama salah');

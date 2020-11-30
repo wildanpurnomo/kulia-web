@@ -9,6 +9,7 @@ class AuthController extends BaseController {
         this.login_POST = this.login_POST.bind(this);
         this.register_POST = this.register_POST.bind(this);
         this.authenticate_GET = this.authenticate_GET.bind(this);
+        this.logout_POST = this.logout_POST.bind(this);
     }
 
     async login_POST(req, res, next) {
@@ -17,7 +18,8 @@ class AuthController extends BaseController {
             let user = await UserModel.login(username, password);
             user.password = undefined;
             let token = this.createToken(user._id);
-            res.cookie('jwt', token, { httpOnly: true, secure: process.env.IS_USING_GAE, sameSite: 'none' });
+            let cookieOption = this.getCookieOption();
+            res.cookie('jwt', token, cookieOption);
             res.status(200).json(this.createSuccessResponse(user));
         } catch (error) {
             console.error(error);
@@ -36,7 +38,8 @@ class AuthController extends BaseController {
                 let user = await UserModel.create({ username, profilePicUrl, email, password });
                 user.password = undefined;
                 let token = this.createToken(user._id);
-                res.cookie('jwt', token, { httpOnly: true, secure: process.env.IS_USING_GAE, sameSite: 'none' });
+                let cookieOption = this.getCookieOption();
+                res.cookie('jwt', token, cookieOption);
                 res.status(200).json(this.createSuccessResponse(user));
             }
         } catch (error) {
@@ -60,7 +63,8 @@ class AuthController extends BaseController {
 
     logout_POST(req, res) {
         try {
-            res.cookie('jwt', '', { maxAge: 1, secure: process.env.IS_USING_GAE, sameSite: 'none' });
+            let cookieOption = this.getCookieOption({ isLogout: true });
+            res.cookie('jwt', '', cookieOption);
             res.status(200).json(super.createSuccessResponse({ message: 'Logout berhasil' }));
         } catch (error) {
             super.logMessage("authController at logout_post", error);
