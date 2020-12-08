@@ -12,4 +12,8 @@ router.post('/story/follow', StoryController.followUser_POST);
 
 router.post('/story/unfollow', StoryController.unfollowUser_POST);
 
+router.post('/story/share_content', StoryController.shareContent_POST);
+
+router.put('/story/update_author_points', StoryController.updateAuthorPoints_PUT);
+
 export default router;

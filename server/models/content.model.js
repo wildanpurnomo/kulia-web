@@ -26,6 +26,24 @@ const schema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
+schema.statics.addContent = async function (contentData) {
+    await this.create(contentData);
+    let contentList = await this.find({ creatorId: contentData.creatorId });
+    return contentList;
+};
+
+schema.statics.getPersonalStories = async function (userId, queryCondition) {
+    let contentList = await this
+        .find({ $or: queryCondition })
+        .populate({ path: 'creatorId', select: '-password' })
+        .sort({ createdAt: 'descending' });
+    let normalizedList = JSON.parse(JSON.stringify(contentList));
+    return normalizedList.map(item => {
+        item.isAlreadySharedByUser = item.sharedBy.includes(userId);
+        return item;
+    });
+}
+
 const ContentModel = mongoose.model('Content', schema);
 
 export default ContentModel;

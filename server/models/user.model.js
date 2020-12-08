@@ -2,6 +2,9 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import { ErrorHandler } from '../libs/error.lib';
 import escapeStringRegexp from 'escape-string-regexp';
+const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+const passwordRegex = /(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])/;
+const additionalPointsPerShare = 10;
 
 const schema = new mongoose.Schema({
     email: {
@@ -10,13 +13,14 @@ const schema = new mongoose.Schema({
         unique: true,
         lowercase: true,
         trim: true,
-        match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Alamat email tidak valid']
+        match: [emailRegex, 'Alamat email tidak valid']
     },
     username: {
         type: String,
         required: [true, "Mohon masukkan username"],
         unique: true,
         trim: true,
+        minlength: [6, "Username minimal 6 karakter"]
     },
     profilePicUrl: {
         type: String,
@@ -25,6 +29,8 @@ const schema = new mongoose.Schema({
     password: {
         type: String,
         required: [true, "Mohon masukkan password"],
+        minlength: [8, "Password minimal 8 karakter"],
+        match: [passwordRegex, "Password harus mengandung minimal 1 huruf kecil, 1 huruf besar dan 1 angka"]
     },
     points: {
         type: Number,
@@ -117,17 +123,54 @@ schema.statics.alterPassword = async function (userId, oldPassword, newPassword)
     let user = await this.findById(userId);
     if (user) {
         let isPasswordMatch = await bcrypt.compare(oldPassword, user.password);
-        if (isPasswordMatch) {
+
+        if (!isPasswordMatch) {
+            throw new ErrorHandler('Password lama salah');
+        } else if (!isValidField(newPassword, passwordRegex)) {
+            throw new ErrorHandler('Password tidak valid');
+        } else {
             let salt = await bcrypt.genSalt();
             let hashed = await bcrypt.hash(newPassword, salt);
             let userData = await this.findOneAndUpdate({ _id: userId }, { password: hashed }, { new: true }).select('-password');
             return userData;
-        } else {
-            throw new ErrorHandler('Password lama salah');
         }
     } else {
         throw new ErrorHandler('User tidak ditemukan');
     }
+}
+
+schema.statics.alterProfile = async function (userId, email, username) {
+    let user = await this.findById(userId);
+    if (user) {
+        if (!isValidField(email, emailRegex)) {
+            throw new ErrorHandler('Email tidak valid');
+        } else if (!isValidUsername(username)) {
+            throw new ErrorHandler('Username minimal 6 karakter');
+        } else {
+            let userData = await this.findOneAndUpdate({ _id: userId }, { email: email, username: username }, { new: true }).select('-password');
+            return userData;
+        }
+    } else {
+        throw new ErrorHandler('User tidak ditemukan');
+    }
+}
+
+schema.statics.updatePoints = async function (userId) {
+    let user = await this.findById(userId);
+    if (user) {
+        await this.findOneAndUpdate({ _id: userId }, { points: user.points + additionalPointsPerShare });
+        return true;
+    } else {
+        throw new ErrorHandler('Author tidak ditemukan');
+    }
+}
+
+const isValidField = (value, regex) => {
+    return value.match(regex);
+}
+
+const isValidUsername = (username) => {
+    return username.length > 6;
 }
 
 const UserModel = mongoose.model('User', schema);

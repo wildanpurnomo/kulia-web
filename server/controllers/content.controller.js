@@ -75,14 +75,13 @@ class ContentController extends BaseController {
 
             Promise.all(promises)
                 .then(async mediaUrls => {
-                    let toBeSaved = {
+                    let contentData = {
                         creatorId: decoded.id,
                         title: req.body.title,
                         description: req.body.description,
                         mediaUrls: mediaUrls
                     }
-                    await ContentModel.create(toBeSaved);
-                    let contentList = await ContentModel.find({ creatorId: decoded.id });
+                    let contentList = await ContentModel.addContent(contentData);
                     res.status(200).json(this.createSuccessResponse(contentList));
                 })
                 .catch(error => {
@@ -92,8 +91,7 @@ class ContentController extends BaseController {
         } else {
             try {
                 req.body.creatorId = decoded.id;
-                await ContentModel.create(req.body);
-                let contentList = await ContentModel.find({ creatorId: decoded.id });
+                let contentList = await ContentModel.addContent(req.body);
                 res.status(200).json(this.createSuccessResponse(contentList));
             } catch (error) {
                 console.error(error);
@@ -106,6 +104,7 @@ class ContentController extends BaseController {
         try {
             let token = req.cookies.jwt;
             let decoded = this.decodeToken(token);
+            req.body.slug = req.body.title.trim().replace(" ", "-");
             await ContentModel.findOneAndUpdate({ _id: req.params.contentId }, req.body);
             let contentList = await ContentModel.find({ creatorId: decoded.id });
             res.status(200).json(this.createSuccessResponse(contentList));

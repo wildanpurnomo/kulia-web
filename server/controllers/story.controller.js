@@ -1,6 +1,9 @@
 import BaseController from './base.controller';
 import UserModel from '../models/user.model';
 import ContentModel from '../models/content.model';
+import SharedModel from '../models/shared.model';
+import { mergeArrayByDateISO } from '../libs/array.lib';
+import { ErrorHandler } from '../libs/error.lib';
 
 class StoryController extends BaseController {
     constructor() {
@@ -10,6 +13,8 @@ class StoryController extends BaseController {
         this.getPersonalFollowing_GET = this.getPersonalFollowing_GET.bind(this);
         this.followUser_POST = this.followUser_POST.bind(this);
         this.unfollowUser_POST = this.unfollowUser_POST.bind(this);
+        this.shareContent_POST = this.shareContent_POST.bind(this);
+        this.updateAuthorPoints_PUT = this.updateAuthorPoints_PUT.bind(this);
     }
 
     async getUsersByUsername_GET(req, res, next) {
@@ -24,16 +29,8 @@ class StoryController extends BaseController {
 
     async getPersonalStories_GET(req, res, next) {
         try {
-            let decoded = req.decoded;
-            let userData = await UserModel.findById(decoded.id);
-            let queryCondition = [];
-            userData.followingIds.forEach(item => {
-                queryCondition.push({
-                    creatorId: item
-                });
-            });
-            let contentList = queryCondition.length === 0 ? [] : await ContentModel.find({ $or: queryCondition }).populate({ path: 'creatorId', select: '-password' }).sort({ createdAt: 'descending' });
-            res.status(200).json(this.createSuccessResponse(contentList));
+            let stories = await this.generateUserPersonalStories(req.decoded.id);
+            res.status(200).json(this.createSuccessResponse(stories));
         } catch (error) {
             console.error(error);
             next(error);
@@ -68,11 +65,65 @@ class StoryController extends BaseController {
             let decoded = req.decoded;
             let unfollowingId = req.body.unfollowingId;
             let followingList = await UserModel.unfollowOtherUser(decoded.id, unfollowingId);
-            res.status(200).json(this.createSuccessResponse(followingList))
+            res.status(200).json(this.createSuccessResponse(followingList));
         } catch (error) {
             console.error(error);
             next(error);
         }
+    }
+
+    async shareContent_POST(req, res, next) {
+        try {
+            let contentData = await ContentModel.findById(req.body.contentId);
+            if (!contentData.sharedBy.includes(req.decoded.id)) {
+                req.body.sharerId = req.decoded.id;
+                contentData.sharedBy.push(req.decoded.id);
+                await SharedModel.create(req.body);
+                await ContentModel.findOneAndUpdate({ _id: req.body.contentId }, { sharedBy: contentData.sharedBy });
+                await UserModel.updatePoints(contentData.creatorId);
+                let stories = await this.generateUserPersonalStories(req.decoded.id);
+                res.status(200).json(this.createSuccessResponse(stories));
+            } else {
+                throw new ErrorHandler("Anda sudah membagikan konten ini ke beranda Wappita");
+            }
+        } catch (error) {
+            console.error(error);
+            next(error);
+        }
+    }
+
+    async updateAuthorPoints_PUT(req, res, next) {
+        try {
+            await UserModel.updatePoints(req.body.authorId);
+            res.status(200).json(this.createSuccessResponse({ message: 'OK' }));
+        } catch (error) {
+            console.error(error);
+            next(error);
+        }
+    }
+
+    async generateUserPersonalStories(userId) {
+        let userData = await UserModel.findById(userId);
+        let contentQueryCondition = [];
+        let sharedQueryCondition = [];
+        contentQueryCondition.push({
+            creatorId: userId
+        });
+        sharedQueryCondition.push({
+            sharerId: userId
+        });
+        userData.followingIds.forEach(item => {
+            contentQueryCondition.push({
+                creatorId: item
+            });
+            sharedQueryCondition.push({
+                sharerId: item
+            });
+        });
+
+        let contentList = await ContentModel.getPersonalStories(userId, contentQueryCondition);
+        let sharedList = await SharedModel.getPersonalStories(sharedQueryCondition);
+        return mergeArrayByDateISO(sharedList, contentList);
     }
 }
 

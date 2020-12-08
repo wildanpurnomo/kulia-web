@@ -15,7 +15,7 @@ const dbUri = process.env.MONGO_URI || "mongodb://localhost/wakwau";
  * Get port from environment and store in Express.
  */
 
-var port = normalizePort(process.env.PORT || '4000');
+var port = normalizePort(process.env.PORT || '5000');
 app.set('port', port);
 
 /**

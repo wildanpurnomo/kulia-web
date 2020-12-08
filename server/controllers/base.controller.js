@@ -17,7 +17,7 @@ export default class BaseController {
         let cookieOption = {};
         cookieOption.httpOnly = true;
         
-        if (process.env.IS_USING_GAE == true) {
+        if (process.env.IS_USING_GAE === true) {
             cookieOption.secure = true;
             cookieOption.sameSite = 'none';
         }
