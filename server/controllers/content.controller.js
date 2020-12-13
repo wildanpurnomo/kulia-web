@@ -16,7 +16,7 @@ class ContentController extends BaseController {
 
     async getContentById_GET(req, res, next) {
         try {
-            let contentData = await ContentModel.findById(req.params.contentId);
+            let contentData = await ContentModel.findById(req.params.contentId).populate({ path: 'creatorId', select: '-password' });
             res.status(200).json(this.createSuccessResponse(contentData));
         } catch (error) {
             console.error(error);
@@ -49,55 +49,57 @@ class ContentController extends BaseController {
     async createContent_POST(req, res, next) {
         let token = req.cookies.jwt;
         let decoded = this.decodeToken(token);
-        if (req.files) {
-            let bucket = StorageInstance.bucket(process.env.CLOUD_BUCKET);
-            let promises = [];
-            req.files['media'].forEach(file => {
-                let fileType = path.extname(file.originalname);
-                let gcsName = `kuliah_content_media_${creatorId}_${Date.now()}${fileType}`;
-                let blob = bucket.file(gcsName);
+        try {
+            if (req.files['media']) {
+                let bucket = StorageInstance.bucket(process.env.CLOUD_BUCKET);
+                let promises = [];
+                req.files['media'].forEach(file => {
+                    let fileType = path.extname(file.originalname);
+                    let gcsName = `wappita_${decoded.id}_${Date.now()}${fileType}`;
+                    let blob = bucket.file(gcsName);
 
-                let promise = new Promise((resolve, reject) => {
-                    let blobStream = blob.createWriteStream();
+                    let promise = new Promise((resolve, reject) => {
+                        let blobStream = blob.createWriteStream();
 
-                    blobStream.on('error', err => reject(err));
+                        blobStream.on('error', err => reject(err));
 
-                    blobStream.on('finish', async () => {
-                        let url = `${process.env.GCLOUD_PUBLIC_BASE_URL}/${process.env.CLOUD_BUCKET}/${gcsName}`;
-                        resolve(url);
+                        blobStream.on('finish', async () => {
+                            let url = `${process.env.GCLOUD_PUBLIC_BASE_URL}/${process.env.CLOUD_BUCKET}/${gcsName}`;
+                            resolve(url);
+                        });
+
+                        blobStream.end(file.buffer);
                     });
 
-                    blobStream.end(file.buffer);
+                    promises.push(promise);
                 });
 
-                promises.push(promise);
-            });
-
-            Promise.all(promises)
-                .then(async mediaUrls => {
-                    let contentData = {
-                        creatorId: decoded.id,
-                        title: req.body.title,
-                        description: req.body.description,
-                        mediaUrls: mediaUrls
-                    }
-                    let contentList = await ContentModel.addContent(contentData);
-                    res.status(200).json(this.createSuccessResponse(contentList));
-                })
-                .catch(error => {
-                    console.error(error);
-                    next(error);
-                })
-        } else {
-            try {
+                Promise.all(promises)
+                    .then(async mediaUrls => {
+                        let contentData = {
+                            creatorId: decoded.id,
+                            title: req.body.title,
+                            description: req.body.description,
+                            mediaUrls: mediaUrls,
+                            youtubeUrl: req.body.youtubeUrl
+                        }
+                        let contentList = await ContentModel.addContent(contentData);
+                        res.status(200).json(this.createSuccessResponse(contentList));
+                    })
+                    .catch(error => {
+                        console.error(error);
+                        next(error);
+                    })
+            } else {
                 req.body.creatorId = decoded.id;
                 let contentList = await ContentModel.addContent(req.body);
                 res.status(200).json(this.createSuccessResponse(contentList));
-            } catch (error) {
-                console.error(error);
-                next(error);
             }
+        } catch (error) {
+            console.error(error);
+            next(error);
         }
+
     }
 
     async updateContent_PUT(req, res, next) {

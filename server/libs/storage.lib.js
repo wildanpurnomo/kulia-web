@@ -1,5 +1,7 @@
 import Multer from 'multer';
 import { Storage } from '@google-cloud/storage';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const MulterInstance = Multer({
     storage: Multer.memoryStorage(),

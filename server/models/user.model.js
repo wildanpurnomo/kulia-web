@@ -28,9 +28,9 @@ const schema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: [true, "Mohon masukkan password"],
         minlength: [8, "Password minimal 8 karakter"],
-        match: [passwordRegex, "Password harus mengandung minimal 1 huruf kecil, 1 huruf besar dan 1 angka"]
+        match: [passwordRegex, "Password harus mengandung minimal 1 huruf kecil, 1 huruf besar dan 1 angka"],
+        default: null
     },
     points: {
         type: Number,
@@ -43,14 +43,16 @@ const schema = new mongoose.Schema({
 }, { timestamps: true });
 
 schema.pre('save', async function (next) {
-    const salt = await bcrypt.genSalt();
-    this.password = await bcrypt.hash(this.password, salt);
+    if (this.password !== null) {
+        const salt = await bcrypt.genSalt();
+        this.password = await bcrypt.hash(this.password, salt);
+    }
     next();
 });
 
 schema.statics.login = async function (username, password) {
     let user = await this.findOne({ username });
-    if (user) {
+    if (user && user.password !== null) {
         let isPasswordMatch = await bcrypt.compare(password, user.password);
         if (isPasswordMatch) {
             return user;
@@ -60,6 +62,11 @@ schema.statics.login = async function (username, password) {
     } else {
         throw new ErrorHandler('User tidak ditemukan');
     }
+}
+
+schema.statics.handleSocialAuth = async function (username, email, profilePicUrl) {
+    let user = await this.findOne({ email });
+    return user ? user : this.create({ username, email, profilePicUrl });
 }
 
 schema.statics.discoverOtherUsers = async function (userId, usernameQuery) {

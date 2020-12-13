@@ -8,6 +8,7 @@ class AuthController extends BaseController {
         super();
         this.login_POST = this.login_POST.bind(this);
         this.register_POST = this.register_POST.bind(this);
+        this.socialAuth_POST = this.socialAuth_POST.bind(this);
         this.authenticate_GET = this.authenticate_GET.bind(this);
         this.logout_POST = this.logout_POST.bind(this);
     }
@@ -48,6 +49,21 @@ class AuthController extends BaseController {
         }
     }
 
+    async socialAuth_POST(req, res, next) {
+        try {
+            let { username, email, profilePicUrl } = req.body;
+            let user = await UserModel.handleSocialAuth(username, email, profilePicUrl);
+            user.password = undefined;
+            let token = this.createToken(user._id);
+            let cookieOption = this.getCookieOption();
+            res.cookie('jwt', token, cookieOption);
+            res.status(200).json(this.createSuccessResponse(user));
+        } catch (error) {
+            console.error(error);
+            next(error);
+        }
+    }
+
     async authenticate_GET(req, res, next) {
         try {
             let token = req.cookies.jwt;
@@ -67,7 +83,7 @@ class AuthController extends BaseController {
             res.cookie('jwt', '', cookieOption);
             res.status(200).json(super.createSuccessResponse({ message: 'Logout berhasil' }));
         } catch (error) {
-            super.logMessage("authController at logout_post", error);
+            console.error(error);
             next(error);
         }
     }

@@ -10,4 +10,6 @@ router.post('/auth/login', AuthController.login_POST);
 
 router.post('/auth/logout', AuthController.logout_POST);
 
+router.post('/auth/with_google', AuthController.socialAuth_POST);
+
 export default router;

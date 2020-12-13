@@ -20,6 +20,11 @@ const schema = new mongoose.Schema({
         type: Array,
         default: [],
     },
+    youtubeUrl: {
+        type: String,
+        default: "",
+        match: [/^((?:https?:)?\/\/)?((?:www|m)\.)?((?:youtube\.com|youtu.be))(\/(?:[\w]+\?v=|embed\/|v\/)?)([\w]+)(\S+)?$/, "Url YouTube tidak valid"]
+    },
     sharedBy: {
         type: Array,
         default: [],
