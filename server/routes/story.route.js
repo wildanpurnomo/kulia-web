@@ -16,4 +16,6 @@ router.post('/story/share_content', StoryController.shareContent_POST);
 
 router.put('/story/update_author_points', StoryController.updateAuthorPoints_PUT);
 
+router.get('/story/sample_users', StoryController.getSampleWappitaUsers_GET);
+
 export default router;

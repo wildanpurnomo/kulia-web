@@ -9,6 +9,7 @@ class StoryController extends BaseController {
     constructor() {
         super();
         this.getUsersByUsername_GET = this.getUsersByUsername_GET.bind(this);
+        this.getSampleWappitaUsers_GET = this.getSampleWappitaUsers_GET.bind(this);
         this.getPersonalStories_GET = this.getPersonalStories_GET.bind(this);
         this.getPersonalFollowing_GET = this.getPersonalFollowing_GET.bind(this);
         this.followUser_POST = this.followUser_POST.bind(this);
@@ -20,6 +21,16 @@ class StoryController extends BaseController {
     async getUsersByUsername_GET(req, res, next) {
         try {
             let userList = await UserModel.discoverOtherUsers(req.decoded.id, req.query.username);
+            res.status(200).json(this.createSuccessResponse(userList));
+        } catch (error) {
+            console.error(error);
+            next(error);
+        }
+    }
+
+    async getSampleWappitaUsers_GET(req, res, next) {
+        try {
+            let userList = await UserModel.getSampleUser(req.decoded.id);
             res.status(200).json(this.createSuccessResponse(userList));
         } catch (error) {
             console.error(error);

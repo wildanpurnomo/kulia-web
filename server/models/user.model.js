@@ -80,6 +80,17 @@ schema.statics.discoverOtherUsers = async function (userId, usernameQuery) {
     });
 }
 
+schema.statics.getSampleUser = async function (userId) {
+    let user = await this.findById(userId);
+    let userList = await UserModel.aggregate().sample(5).exec();
+    let normalizedList = JSON.parse(JSON.stringify(userList));
+    return normalizedList.map(item => {
+        item.isFollowedByUser = user.followingIds.includes(item._id) ? true : false;
+        item.password = undefined;
+        return item;
+    });
+}
+
 schema.statics.getFollowingList = async function (userId) {
     let user = await this.findById(userId);
     let queryCondition = [];
