@@ -3,8 +3,6 @@ import ContentController from '../controllers/content.controller';
 import { MulterInstance } from '../libs/storage.lib';
 const router = express.Router();
 
-router.get('/content/:contentId', ContentController.getContentById_GET);
-
 router.get('/content/personal/me', ContentController.getPersonalContent_GET);
 
 router.get('/content/by_creator/:creatorId', ContentController.getContentByCreatorId_GET);

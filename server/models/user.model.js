@@ -139,7 +139,7 @@ schema.statics.unfollowOtherUser = async function (userId, unfollowingId) {
 
 schema.statics.alterPassword = async function (userId, oldPassword, newPassword) {
     let user = await this.findById(userId);
-    if (user) {
+    if (user && user.password !== null) {
         let isPasswordMatch = await bcrypt.compare(oldPassword, user.password);
 
         if (!isPasswordMatch) {
@@ -153,7 +153,8 @@ schema.statics.alterPassword = async function (userId, oldPassword, newPassword)
             return userData;
         }
     } else {
-        throw new ErrorHandler('User tidak ditemukan');
+        let message = user.password === null ? "Anda tidak membutuhkan password." : "User tidak ditemukan";
+        throw new ErrorHandler(message);
     }
 }
 
@@ -164,6 +165,9 @@ schema.statics.alterProfile = async function (userId, email, username) {
             throw new ErrorHandler('Email tidak valid');
         } else if (!isValidUsername(username)) {
             throw new ErrorHandler('Username minimal 6 karakter');
+        } else if (user.password === null){
+            let userData = await this.findOneAndUpdate({ _id: userId }, { username: username }, { new: true }).select('-password');
+            return userData;
         } else {
             let userData = await this.findOneAndUpdate({ _id: userId }, { email: email, username: username }, { new: true }).select('-password');
             return userData;

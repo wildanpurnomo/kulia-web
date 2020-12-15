@@ -44,7 +44,9 @@ app.use(logger('dev'));
 
 // Use Auth Router without Authorization middleware
 import authRouter from './routes/auth.route';
+import publicViewRouter from './routes/publicview.route';
 app.use('/api', authRouter);
+app.use('/api', publicViewRouter);
 
 // Use Authorization middleware for the rest of the routes
 import { verifyJwt } from './libs/authorization.lib';

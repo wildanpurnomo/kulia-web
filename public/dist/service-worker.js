@@ -14,7 +14,7 @@
 importScripts("https://storage.googleapis.com/workbox-cdn/releases/4.3.1/workbox-sw.js");
 
 importScripts(
-  "/precache-manifest.496400add1cb4e5b2a372170cdbd76d8.js"
+  "/precache-manifest.4cf6f9a58d7136ee852e4160b0060225.js"
 );
 
 workbox.core.setCacheNameDetails({prefix: "kuliah-web-fe"});
